@@ -20,8 +20,9 @@ RF24 radio(7, 8);  // CE, CSN
 
 struct Shape
 {
-  uint16_t rotations[4];
-  uint8_t curRot;
+  int rotations[4];
+  int x;
+  int y;
 };
 
 //RF Var
@@ -40,17 +41,21 @@ int pot1Val = 0;
 int pot2Val = 0;
 uint8_t BY = 0;
 uint8_t BR = 0;
+int curRot = 1;
 
 //Function frequencies
-int newShape = 2000;
-int moveDown = 200;
+unsigned long newShape = 30;
+unsigned long moveDown = 250;
 unsigned long timeStamp1 = 0;
 unsigned long timeStamp2 = 0;
 unsigned long timeNow = 0;
 
 //Temp variables
 uint8_t temp = 0;
+int tempInt = 0;
 Shape tempShape;
+int BRCount = 0;
+int BYCount = 0;
 
 //Position variables
 uint8_t yIndex = 0;
@@ -82,7 +87,7 @@ uint8_t ledMatrix[18][12] = {
 //Creating shapes
 uint8_t displayMatrix[18][12];
 
-const uint8_t colLen = 8;
+const int colLen = 8;
 uint32_t colors[colLen] = {CRGB::Black, CRGB::Turquoise, CRGB::Blue, CRGB::DarkOrange, CRGB::Yellow, CRGB::Green, CRGB::Purple, CRGB::Red};
 
 Shape stick;
@@ -122,7 +127,7 @@ Shape getShape(int num){
 void setup() {
   // put your setup code here, to run once:
   delay(500);
-  Serial.begin(9600);
+  //Serial.begin(9600);
   radio.begin();
 
   //set the address
@@ -142,31 +147,45 @@ void setup() {
   stick.rotations[0] = 0x000F;
   stick.rotations[1] = 0x1111;
   stick.rotations[2] = 0x000F;
-  stick.rotations[3] = 0x1111;
+  stick.rotations[3] = 0x1111;\
+  stick.x = 1;
+  stick.y = 1;
   cube.rotations[0] = 0x0033;
   cube.rotations[1] = 0x0033;
   cube.rotations[2] = 0x0033;
   cube.rotations[3] = 0x0033;
+  cube.x = 1;
+  cube.y = 1;
   table.rotations[0] = 0x0027;
   table.rotations[1] = 0x0232;
   table.rotations[2] = 0x0072;
   table.rotations[3] = 0x0131;
+  table.x = 1;
+  table.y = 1;
   el.rotations[0] = 0x0017;
   el.rotations[1] = 0x0223;
   el.rotations[2] = 0x0074;
   el.rotations[3] = 0x0311;
+  el.x = 1;
+  el.y = 1;
   mirrorEl.rotations[0] = 0x0047;
   mirrorEl.rotations[1] = 0x0322;
   mirrorEl.rotations[2] = 0x0071;
   mirrorEl.rotations[3] = 0x0113;  
+  mirrorEl.x = 1;
+  mirrorEl.y = 1;
   squiggle.rotations[0] = 0x0063;
   squiggle.rotations[1] = 0x0132;
   squiggle.rotations[2] = 0x0063;
   squiggle.rotations[3] = 0x0132;
+  squiggle.x = 1;
+  squiggle.y = 1;
   mirrorSquiggle.rotations[0] = 0x0036;
   mirrorSquiggle.rotations[1] = 0x0231;
   mirrorSquiggle.rotations[2] = 0x0036;
-  mirrorSquiggle.rotations[3] = 0x0231;  
+  mirrorSquiggle.rotations[3] = 0x0231; 
+  mirrorSquiggle.x = 1;
+  mirrorSquiggle.y = 1; 
 
   FastLED.clear();
   FastLED.show();
@@ -195,45 +214,104 @@ void loop() {
     BY = atoi(val);
     val = strtok(NULL, ",");
     BR = atoi(val);
+  }
+  timeNow = millis();
 
-    timeNow = millis();
+  if (1) {
+    newShape = 0;
+    curRot = 2;
+    tempShape = getShape(random(7)); 
+    temp = random(1, 8);
+    tempShape.x = 7;
+    tempShape.y = 4; 
 
-    if ((timeNow - timeStamp2) >= newShape) {
-      timeStamp2 = timeNow;
-      tempShape = getShape(random(7));
-      tempShape.curRot = random(4);
-      temp = random(1, 8);
+    for (uint8_t j = 0; j < 16; j++) {
+      if (j % 4 == 0) {
+        yIndex++;
+      }
+      if ((tempShape.rotations[curRot] >> j) & 1) {
+        displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = temp;
+      }
+      else{
+        displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = CRGB::Black;
+      }
+    }
+    yIndex = 0;
+  }
 
+  for (int i = 0; i < 18; i++) {
+    for (int j = 0; j < 12; j++) {
+      leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
+    }
+  }
+
+  //Serial.println(curRot);
+  FastLED.show();
+  FastLED.clear();
+
+ /*  if (!BR){
+    BRCount++;
+    if (BRCount > 20){
+      if ((curRot - 1) < 0){
+        curRot = 3;
+      }
+      else{
+        curRot--;
+      }
       for (int j = 0; j < 16; j++) {
         if (j % 4 == 0) {
           yIndex++;
         }
-        if ((tempShape.rotations[tempShape.curRot] >> j) & 1) {
-          displayMatrix[j % 4][(yIndex - 1) + 4] = temp;
+        if ((tempShape.rotations[curRot] >> j) & 1) {
+          displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = temp;
         }
       }
       yIndex = 0;
     }
+  }
+  else{
+    BRCount = 0;
+  }
 
-    if ((timeNow - timeStamp1) >= moveDown) {
-      timeStamp1 = timeNow;
-      for (int i = 18; i >= 0; i--) {
-        for (int j = 12; j >= 0; j--) {
-          if ((i - 1) >= 0){
-            displayMatrix[i][j] = displayMatrix[i - 1][j];
-          }
-          else{
-            displayMatrix[i][j] = 0;
-          }
+  if (!BY){
+    BYCount++;
+    if (BYCount > 20){
+      if ((curRot + 1) > 3){
+        curRot = 0;
+      }
+      else{
+        curRot++;
+      }
+      for (int j = 0; j < 16; j++) {
+        if (j % 4 == 0) {
+          yIndex++;
+        }
+        if ((tempShape.rotations[curRot] >> j) & 1) {
+          displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = temp;
         }
       }
+      yIndex = 0;
     }
-    
-    for (int i = 0; i < 18; i++) {
-      for (int j = 0; j < 12; j++) {
-        leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
+  }
+  else{
+    BYCount = 0;
+  } */
+
+/*   if ((timeNow - timeStamp1) >= moveDown) {
+    timeStamp1 = timeNow;
+    newShape++;
+    for (int i = 18; i >= 0; i--) {
+      for (int j = 12; j >= 0; j--) {
+        if ((i - 1) >= 0){
+          displayMatrix[i][j] = displayMatrix[i - 1][j];
+        }
+        else{
+          displayMatrix[i][j] = 0;
+        }
+      }
+      if (i == 0){
+        tempShape.x++;
       }
     }
-    FastLED.show();
-  }
+  } */
 }
