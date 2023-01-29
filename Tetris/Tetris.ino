@@ -42,9 +42,10 @@ int pot2Val = 0;
 uint8_t BY = 0;
 uint8_t BR = 0;
 int curRot = 1;
+int newShape = 1;
 
 //Function frequencies
-unsigned long newShape = 30;
+unsigned long makeNewShape = 500;
 unsigned long moveDown = 250;
 unsigned long timeStamp1 = 0;
 unsigned long timeStamp2 = 0;
@@ -147,7 +148,7 @@ void setup() {
   stick.rotations[0] = 0x000F;
   stick.rotations[1] = 0x1111;
   stick.rotations[2] = 0x000F;
-  stick.rotations[3] = 0x1111;\
+  stick.rotations[3] = 0x1111;
   stick.x = 1;
   stick.y = 1;
   cube.rotations[0] = 0x0033;
@@ -215,15 +216,46 @@ void loop() {
     val = strtok(NULL, ",");
     BR = atoi(val);
   }
-  timeNow = millis();
 
-  if (1) {
-    newShape = 0;
-    curRot = 2;
-    tempShape = getShape(random(7)); 
-    temp = random(1, 8);
-    tempShape.x = 7;
-    tempShape.y = 4; 
+  if ((millis() - timeStamp1) > makeNewShape)  {
+    timeStamp1 = millis();
+    if (newShape){
+      newShape = 0;
+      curRot = random(4);
+      tempShape = getShape(random(7)); 
+      temp = random(1, 8);
+      tempShape.x = 2;
+      tempShape.y = 4;
+    }
+    for (uint8_t j = 0; j < 16; j++) {
+      if (j % 4 == 0) {
+        yIndex++;
+      }
+      if ((tempShape.rotations[curRot] >> j) & 1) {
+        displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = 0;
+      }
+      else{
+        displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = 0;
+      }
+    }
+    yIndex = 0;
+
+    if ((tempShape.x + 1) == 19){
+      newShape = 1;
+    }
+
+    else{
+      tempShape.x++;
+    }
+
+    if ((tempShape.x % 4) == 0){
+      if ((curRot + 1) == 4){
+        curRot = 0;
+      }
+      else{
+        curRot++;
+      }
+    }
 
     for (uint8_t j = 0; j < 16; j++) {
       if (j % 4 == 0) {
@@ -233,7 +265,7 @@ void loop() {
         displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = temp;
       }
       else{
-        displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = CRGB::Black;
+        displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = 0;
       }
     }
     yIndex = 0;
@@ -244,74 +276,7 @@ void loop() {
       leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
     }
   }
-
-  //Serial.println(curRot);
+  
   FastLED.show();
   FastLED.clear();
-
- /*  if (!BR){
-    BRCount++;
-    if (BRCount > 20){
-      if ((curRot - 1) < 0){
-        curRot = 3;
-      }
-      else{
-        curRot--;
-      }
-      for (int j = 0; j < 16; j++) {
-        if (j % 4 == 0) {
-          yIndex++;
-        }
-        if ((tempShape.rotations[curRot] >> j) & 1) {
-          displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = temp;
-        }
-      }
-      yIndex = 0;
-    }
-  }
-  else{
-    BRCount = 0;
-  }
-
-  if (!BY){
-    BYCount++;
-    if (BYCount > 20){
-      if ((curRot + 1) > 3){
-        curRot = 0;
-      }
-      else{
-        curRot++;
-      }
-      for (int j = 0; j < 16; j++) {
-        if (j % 4 == 0) {
-          yIndex++;
-        }
-        if ((tempShape.rotations[curRot] >> j) & 1) {
-          displayMatrix[(j % 4) + tempShape.x][(yIndex - 1) + tempShape.y] = temp;
-        }
-      }
-      yIndex = 0;
-    }
-  }
-  else{
-    BYCount = 0;
-  } */
-
-/*   if ((timeNow - timeStamp1) >= moveDown) {
-    timeStamp1 = timeNow;
-    newShape++;
-    for (int i = 18; i >= 0; i--) {
-      for (int j = 12; j >= 0; j--) {
-        if ((i - 1) >= 0){
-          displayMatrix[i][j] = displayMatrix[i - 1][j];
-        }
-        else{
-          displayMatrix[i][j] = 0;
-        }
-      }
-      if (i == 0){
-        tempShape.x++;
-      }
-    }
-  } */
 }
