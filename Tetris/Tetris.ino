@@ -421,7 +421,7 @@ void loop() {
       }
       newShape = 0;
       curRot = random(4);
-      tempShape = getShape(random(7));
+      tempShape = getShape(random(8));
       temp = random(1, 8);
       lowestX = 0;
       tempShape.x = 0;
