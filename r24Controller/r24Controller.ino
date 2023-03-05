@@ -2,14 +2,13 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-#include <printf.h>
 #include <stdint.h>
 
 #define ButU 6
 #define ButD 3
 #define ButL 5
 #define ButR 4
-#define BumpL 1
+#define BumpL 8
 #define BumpR 9
 #define joyButL 2
 #define joyButR A7
@@ -22,7 +21,7 @@
 #define potV A2
 
 //create an RF24 object
-RF24 radio(7, 8);  // CE, CSN
+RF24 radio(7, 10);  // CE, CSN
 
 const byte address[6] = "node1";
 char data[32] = "";
@@ -50,22 +49,12 @@ int potVerticalVal = 0;
 
 void setup()
 {
-  //Serial.begin(9600);
-  //printf_begin();
   delay(1000);
   radio.begin();
-
-  //Serial.println(test);
-  
   radio.openWritingPipe(address);
-
-  //set the address
   radio.setChannel(0x77);
   radio.setPALevel(RF24_PA_HIGH);
   radio.enableDynamicPayloads();
-  //radio.printDetails();
-  //Serial.println("Transmitter ok");
-  
   pinMode(ButU, INPUT);
   pinMode(ButD, INPUT);
   pinMode(ButL, INPUT);
@@ -88,7 +77,7 @@ void loop()
   buttonNum = 0;
   potNum = 0;
   temp = 0;
-  //Send message to receiver
+
   buttonTop = digitalRead(ButU);
   buttonLeft = digitalRead(ButL);
   buttonDown = digitalRead(ButD);
@@ -134,12 +123,7 @@ void loop()
       buttonNum = (buttons[i] << i) | (buttonNum & 0xFFFFFFFFFFFFFFFF);
   }
   
-  // for (uint8_t i = 0; i < 7; i++){
-  //     temp = pots[i];
-  //     potNum =  (temp << i*8) | (potNum & 0xFFFFFFFFFFFFFFFF);
-  // }
-  
-  sprintf(data, "%d,%d,%d,%d,%d,%d,%d,%d", buttonNum, leftX, leftY, rightX, rightY, potLeftVal, potRightVal, potVerticalVal);
+  sprintf(data, "%d,%d,%d,%d,%d,%d,%d,%d,%d", buttonNum, leftX, leftY, rightX, rightY, potLeftVal, potRightVal, potVerticalVal, buttons[4]);
   radio.write(&data, sizeof(data));
   delay(1);
 }

@@ -56,7 +56,6 @@ void loop()
 {
   if (radio.available()){
     radio.read(&data, sizeof(data));
-    //sscanf(data, "%l", &num);
 
     Serial.println(data);
 
