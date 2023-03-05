@@ -25,8 +25,10 @@
 RF24 radio(7, 8);  // CE, CSN
 
 const byte address[6] = "node1";
-uint64_t num = 0;
-uint64_t temp = 0;
+char data[32] = "";
+int temp = 0;
+int buttonNum = 0;
+int potNum = 0;
 
 int buttons[8];
 int pots[7];
@@ -83,6 +85,9 @@ void setup()
 
 void loop()
 {
+  buttonNum = 0;
+  potNum = 0;
+  temp = 0;
   //Send message to receiver
   buttonTop = digitalRead(ButU);
   buttonLeft = digitalRead(ButL);
@@ -90,8 +95,16 @@ void loop()
   buttonRight = digitalRead(ButR);
   bumperLeft = digitalRead(BumpL);
   bumperRight = digitalRead(BumpR);
-  joyLeftButton = digitalRead(joyButL);
+  joyLeftButton = digitalRead(joyButL);  
   joyRightButton = analogRead(joyButR);
+
+  if (joyRightButton > 10){
+    joyRightButton = 1;
+  }
+  else{
+    joyRightButton = 0;
+  }
+
   leftX = analogRead(LX);
   leftY = analogRead(LY);
   rightX = analogRead(RX);
@@ -107,7 +120,7 @@ void loop()
   buttons[4] = bumperLeft;
   buttons[5] = bumperRight;
   buttons[6] = joyLeftButton;
-  buttons[7] = joyRightButton;
+  buttons[7] = joyRightButton;  
 
   pots[0] = leftX;
   pots[1] = leftY;
@@ -118,14 +131,15 @@ void loop()
   pots[6] = potVerticalVal;
 
   for (uint8_t i = 0; i < 8; i++){ 
-      num = (buttons[i] << i) | (num & 0xFFFFFFFFFFFFFFFF);
+      buttonNum = (buttons[i] << i) | (buttonNum & 0xFFFFFFFFFFFFFFFF);
   }
   
-  for (uint8_t i = 1; i < 8; i++){
-      temp = pots[i];
-      num =  (temp << i*8) | (num & 0xFFFFFFFFFFFFFFFF);
-  }
+  // for (uint8_t i = 0; i < 7; i++){
+  //     temp = pots[i];
+  //     potNum =  (temp << i*8) | (potNum & 0xFFFFFFFFFFFFFFFF);
+  // }
   
-  radio.write(&num, sizeof(num));
-  delay(5);
+  sprintf(data, "%d,%d,%d,%d,%d,%d,%d,%d", buttonNum, leftX, leftY, rightX, rightY, potLeftVal, potRightVal, potVerticalVal);
+  radio.write(&data, sizeof(data));
+  delay(1);
 }

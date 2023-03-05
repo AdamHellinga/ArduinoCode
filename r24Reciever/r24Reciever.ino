@@ -3,46 +3,44 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <printf.h>
-#include <Servo.h>
-#define pwm 3
-#define dir1 2
-#define dir2 4
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 //create an RF24 object
 RF24 radio(7, 8);  // CE, CSN
 
-//Set Servo
-Servo servo;
-
 const byte address[6] = "node1";
+char data[32] = "";
+unsigned long num = 0;
+unsigned long temp = 0;
 
-char* val;
-char output[60];
-int LeftX = 0;
-int LeftY = 0;
-int RightX = 0;
-int RightY = 0;
-int pot1Val = 0;
-int pot2Val = 0;
-int BY = 0;
-int BR = 0;
-int pos = 0;
-int spd = 10;
-int count = 0;
-int loops = 25;
-int off = 0;
-
-float value = 0.0;
-
-char text[32] = {0};
+int buttons[8];
+int pots[7];
+int buttonTop = 0;
+int buttonLeft = 0;
+int buttonDown = 0;
+int buttonRight = 0;
+int bumperLeft = 0;
+int bumperRight = 0;
+int joyLeftButton = 0;
+int joyRightButton = 0;
+int leftX = 0;
+int leftY = 0;
+int rightX = 0;
+int rightY = 0;
+int potLeftVal = 0;
+int potRightVal = 0;
+int potVerticalVal = 0;
 
 void setup()
 {
-  delay(500);
   Serial.begin(9600);
-  printf_begin();
+  //printf_begin();
+  delay(1000);
   radio.begin();
-  
+
   //set the address
   radio.openReadingPipe(0, address);
   radio.setChannel(0x77);
@@ -51,33 +49,50 @@ void setup()
   
   //Set module as receiver
   radio.startListening();
-  radio.printDetails();
-
- servo.attach(9);
+  //radio.printDetails();
 }
 
-void loop(){
-    //Read the data if available in buffer
-    if (radio.available())
-    {
-      radio.read(&text, sizeof(text));
-      val = strtok(text, ",");
-      LeftX = atoi(val);
-      val = strtok(NULL, ",");
-      LeftY = atoi(val);
-      val = strtok(NULL, ",");
-      RightX = atoi(val);
-      val = strtok(NULL, ",");
-      RightY = atoi(val);
-      val = strtok(NULL, ",");
-      pot1Val = atoi(val);
-      val = strtok(NULL, ",");
-      pot2Val = atoi(val);
-      val = strtok(NULL, ",");
-      BY = atoi(val);
-      val = strtok(NULL, ",");
-      BR = atoi(val);
-      
-      Serial.println("YAY!");
+void loop()
+{
+  if (radio.available()){
+    radio.read(&data, sizeof(data));
+    //sscanf(data, "%l", &num);
+
+    Serial.println(data);
+
+    for (uint8_t i = 0; i < 8; i++){
+      buttons[i] = (num >> i) & 1;
     }
+    for (int i = 1; i < 8; i++){
+      pots[i] = (num >> (i*8)) & 255;
+    }
+    
+    buttonTop = buttons[0];
+    buttonLeft = buttons[1];
+    buttonDown = buttons[2];
+    buttonRight = buttons[3];
+    bumperLeft = buttons[4];
+    bumperRight = buttons[5];
+    joyLeftButton = buttons[6];
+    joyRightButton = buttons[7];
+
+    leftX = pots[0];
+    leftY = pots[1];
+    rightX = pots[2];
+    rightY = pots[3];
+    potLeftVal = pots[4];
+    potRightVal = pots[5];
+    potVerticalVal = pots[6];
+    
+    // for (int i = 0; i < 8; i++){
+    //   Serial.print(buttons[i]);
+    //   Serial.print(", ");
+    // }
+    // Serial.print("\t\t");
+    // for (int i = 0; i < 7; i++){
+    //   Serial.print( pots[i]);
+    //   Serial.print(", ");
+    // }
+    // Serial.print("\n");
+  }
 }
