@@ -53,7 +53,6 @@ void setup()
   radio.begin();
   radio.openWritingPipe(address);
   radio.setChannel(0x77);
-  radio.setPALevel(RF24_PA_HIGH);
   radio.enableDynamicPayloads();
   pinMode(ButU, INPUT);
   pinMode(ButD, INPUT);
@@ -70,6 +69,22 @@ void setup()
   pinMode(potL, INPUT);
   pinMode(potR, INPUT);
   pinMode(potV, INPUT);
+
+  if (digitalRead(BumpR) && digitalRead(ButU)){
+    radio.setPALevel(RF24_PA_MAX);
+  }
+  else if (digitalRead(BumpR) && digitalRead(ButL)){
+    radio.setPALevel(RF24_PA_HIGH);
+  }
+  else if (digitalRead(BumpR) && digitalRead(ButR)){
+    radio.setPALevel(RF24_PA_LOW);
+  }
+  else if (digitalRead(BumpR) && digitalRead(ButD)){
+    radio.setPALevel(RF24_PA_MIN);
+  }
+  else{
+    radio.setPALevel(RF24_PA_HIGH);    
+  }
 }
 
 void loop()
@@ -122,8 +137,12 @@ void loop()
   for (uint8_t i = 0; i < 8; i++){ 
       buttonNum = (buttons[i] << i) | (buttonNum & 0xFFFFFFFFFFFFFFFF);
   }
+
+  for (int i = 0; i < 7; i++){
+    pots[i] = map(pots[i], 0, 1023, 0, 100);
+  }
   
-  sprintf(data, "%d,%d,%d,%d,%d,%d,%d,%d,%d", buttonNum, leftX, leftY, rightX, rightY, potLeftVal, potRightVal, potVerticalVal, buttons[4]);
+  sprintf(data, "%d,%d,%d,%d,%d,%d,%d,%d", buttonNum, pots[0], pots[1], pots[2], pots[3], pots[4], pots[5], pots[6]);
   radio.write(&data, sizeof(data));
   delay(1);
 }
