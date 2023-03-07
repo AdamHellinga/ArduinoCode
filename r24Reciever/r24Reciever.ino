@@ -13,8 +13,8 @@ RF24 radio(7, 8);  // CE, CSN
 
 const byte address[6] = "node1";
 char data[32] = "";
-unsigned long num = 0;
-unsigned long temp = 0;
+uint8_t num = 0;
+int val = 0;
 
 int buttons[8];
 int pots[7];
@@ -33,23 +33,22 @@ int rightY = 0;
 int potLeftVal = 0;
 int potRightVal = 0;
 int potVerticalVal = 0;
+int temp = 0;
+
+int length = 0;
+int theta = 0;
+int offset = 0.78539816;  //Radians
 
 void setup()
 {
   Serial.begin(9600);
-  //printf_begin();
   delay(1000);
   radio.begin();
-
-  //set the address
   radio.openReadingPipe(0, address);
   radio.setChannel(0x77);
-  radio.setPALevel(RF24_PA_MAX);
+  radio.setPALevel(RF24_PA_HIGH);
   radio.enableDynamicPayloads();
-  
-  //Set module as receiver
   radio.startListening();
-  //radio.printDetails();
 }
 
 void loop()
@@ -57,14 +56,33 @@ void loop()
   if (radio.available()){
     radio.read(&data, sizeof(data));
 
-    Serial.println(data);
+    val = strtok(data, ",");
+    num = atoi(val);
+    val = strtok(NULL, ",");
+    pots[0] = atoi(val);
+    val = strtok(NULL, ",");
+    pots[1] = atoi(val);
+    val = strtok(NULL, ",");
+    pots[3] = atoi(val);
+    val = strtok(NULL, ",");
+    pots[2] = atoi(val);
+    val = strtok(NULL, ",");
+    pots[4] = atoi(val);
+    val = strtok(NULL, ",");
+    pots[5] = atoi(val);
+    val = strtok(NULL, ",");
+    pots[6] = atoi(val);
 
     for (uint8_t i = 0; i < 8; i++){
       buttons[i] = (num >> i) & 1;
+      if (i > 5){
+        buttons[i] = !buttons[i];
+      }
     }
-    for (int i = 1; i < 8; i++){
-      pots[i] = (num >> (i*8)) & 255;
-    }
+
+    temp = buttons[7];
+    buttons[7] = buttons[6];
+    buttons[6] = temp;
     
     buttonTop = buttons[0];
     buttonLeft = buttons[1];
@@ -72,26 +90,26 @@ void loop()
     buttonRight = buttons[3];
     bumperLeft = buttons[4];
     bumperRight = buttons[5];
-    joyLeftButton = buttons[6];
-    joyRightButton = buttons[7];
+    joyRightButton = buttons[6];
+    joyLeftButton = buttons[7];
 
-    leftX = pots[0];
-    leftY = pots[1];
+    leftY = pots[0];
+    leftX = pots[1];
     rightX = pots[2];
     rightY = pots[3];
     potLeftVal = pots[4];
     potRightVal = pots[5];
     potVerticalVal = pots[6];
     
-    // for (int i = 0; i < 8; i++){
-    //   Serial.print(buttons[i]);
-    //   Serial.print(", ");
-    // }
-    // Serial.print("\t\t");
-    // for (int i = 0; i < 7; i++){
-    //   Serial.print( pots[i]);
-    //   Serial.print(", ");
-    // }
-    // Serial.print("\n");
+    for (int i = 0; i < 8; i++){
+      Serial.print(buttons[i]);
+      Serial.print(", ");
+    }
+    Serial.print("\t");
+    for (int i = 0; i < 7; i++){
+      Serial.print(pots[i]);
+      Serial.print(", ");
+    }
+    Serial.print("\n");
   }
 }
