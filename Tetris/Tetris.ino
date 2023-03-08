@@ -9,7 +9,7 @@
 #define MODEL PL9823
 #define COLOR RGB
 #define NUM_LEDS 216
-#define BRIGHTNESS 10
+#define BRIGHTNESS 20
 #define DEG_TO_RAD 0.017453292519943295769236907684886
 #define RAD_TO_DEG 57.295779513082320876798154814105
 
@@ -29,7 +29,6 @@ const byte address[6] = "node1";
 
 //Input string vars
 char text[32] = { 0 };
-char* val;
 
 //Controller Inputs
 int LeftX = 0;
@@ -62,6 +61,27 @@ int lowestX = 0;
 int rowCount = 0;
 int buttonWait = 0;
 int endGame = 0;
+
+uint8_t num = 0;
+int val = 0;
+
+int buttons[8];
+int pots[7];
+int buttonTop = 0;
+int buttonLeft = 0;
+int buttonDown = 0;
+int buttonRight = 0;
+int bumperLeft = 0;
+int bumperRight = 0;
+int joyLeftButton = 0;
+int joyRightButton = 0;
+int leftX = 0;
+int leftY = 0;
+int rightX = 0;
+int rightY = 0;
+int potLeftVal = 0;
+int potRightVal = 0;
+int potVerticalVal = 0;
 
 //Points
 int points = 0;
@@ -379,24 +399,31 @@ void loop() {
   if (radio.available()) {
     radio.read(&text, sizeof(text));
     val = strtok(text, ",");
+    num = atoi(val);
+    val = strtok(NULL, ",");
     LeftX = atoi(val);
     val = strtok(NULL, ",");
     LeftY = atoi(val);
     val = strtok(NULL, ",");
-    RightX = atoi(val);
-    val = strtok(NULL, ",");
     RightY = atoi(val);
     val = strtok(NULL, ",");
-    pot1Val = atoi(val);
+    RightX = atoi(val);
     val = strtok(NULL, ",");
-    pot2Val = atoi(val);
+    potLeftVal = atoi(val);
     val = strtok(NULL, ",");
-    BY = atoi(val);
+    potRightVal = atoi(val);
     val = strtok(NULL, ",");
-    BR = atoi(val);
+    potVerticalVal = atoi(val);
 
-    BR = !BR;
-    BY = !BY;
+    for (uint8_t i = 0; i < 8; i++){
+      buttons[i] = (num >> i) & 1;
+      if (i > 5){
+        buttons[i] = !buttons[i];
+      }
+    }
+
+    BR = buttons[4];
+    BY = buttons[5]; 
   }
 
   if ((millis() - timeStamp1) > makeNewShape) {
@@ -572,7 +599,7 @@ void loop() {
         }
       }
 
-      if (LeftY < 25){
+      if (RightY > 60){
         makeNewShape = 50;
       }
       else{
