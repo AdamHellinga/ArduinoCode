@@ -44,8 +44,12 @@ int RightX = 0;
 int RightY = 0;
 int pot1Val = 0;
 int pot2Val = 0;
-int BY = 0;
+int vertVal = 0;
+uint8_t num = 0;
+int buttons[8];
+int numPlayers = 1;
 int BR = 0;
+int BY = 0;
 
 //directions
 int up = 0;
@@ -216,8 +220,6 @@ void printWord(char* displayThis, int X, int Y, uint64_t col) {
   int go = 1;
   sprintf(string, displayThis);
   len = strlen(string);
-  
-  FastLED.clear();
 
   for (int i = 0; i < len; i++) {
     tempCol = col;
@@ -350,7 +352,7 @@ void printWord(char* displayThis, int X, int Y, uint64_t col) {
           yIndex++;
         }
         if ((letter >> j) & 1) {
-          leds[ledMatrix[(j % 5) + X][(yIndex - 1) + Y]] = colors[tempCol];
+          leds[ledMatrix[(j % 5) + X][(yIndex - 1) + Y]] = tempCol;
           if (((j % 5) + X) >= furthestX) {
             furthestX = (j % 5) + X;
           }
@@ -363,9 +365,6 @@ void printWord(char* displayThis, int X, int Y, uint64_t col) {
       go = 1;
     }
   }
-  FastLED.show();
-  delay(10000);
-  FastLED.clear();
   FastLED.show();
 }
 
@@ -431,24 +430,41 @@ void loop() {
   {
     radio.read(&text, sizeof(text));
     val = strtok(text, ",");
+    num = atoi(val);
+    val = strtok(NULL, ",");
     LeftX = atoi(val);
     val = strtok(NULL, ",");
     LeftY = atoi(val);
     val = strtok(NULL, ",");
-    RightX = atoi(val);
-    val = strtok(NULL, ",");
     RightY = atoi(val);
+    val = strtok(NULL, ",");
+    RightX = atoi(val);
     val = strtok(NULL, ",");
     pot1Val = atoi(val);
     val = strtok(NULL, ",");
     pot2Val = atoi(val);
     val = strtok(NULL, ",");
-    BY = atoi(val);
-    val = strtok(NULL, ",");
-    BR = atoi(val);
+    vertVal = atoi(val);
 
-    del = map(pot1Val, 0, 1023, 0, 300);
-    del1 = map(pot2Val, 0, 1023, 0, 300);
+    for (uint8_t i = 0; i < 8; i++){
+      buttons[i] = (num >> i) & 1;
+      if (i > 5){
+        buttons[i] = !buttons[i];
+      }
+    }
+
+    if (vertVal <= 50){
+      numPlayers = 1;
+    }
+    else{
+      numPlayers = 2;
+    }
+
+    BR = !buttons[4];
+    BY = !buttons[5]; 
+
+    del = map(pot1Val, 0, 100, 0, 300);
+    del1 = map(pot2Val, 0, 100, 0, 300);
 
     if (!BR) {
       countR++;
@@ -499,21 +515,33 @@ void loop() {
 
     if ((millis() - timeStamp) > del) {
       timeStamp = millis();
-      if (LeftY > 80) {
+      if (LeftY < 40) {
         p1Y = min(9, max(2, (p1Y + 1)));
         p1Dir = 1;
       }
-      if (LeftY < 40) {
+      if (LeftY > 80) {
         p1Y = min(9, max(2, (p1Y - 1)));
         p1Dir = 0;
       }
-      if (RightY > 80) {
-        p2Y = min(9, max(2, (p2Y + 1)));
-        p2Dir = 1;
+      if (numPlayers == 2){
+        if (RightY < 40) {
+          p2Y = min(9, max(2, (p2Y + 1)));
+          p2Dir = 1;
+        }
+        if (RightY > 80) {
+          p2Y = min(9, max(2, (p2Y - 1)));
+          p2Dir = 0;
+        }
       }
-      if (RightY < 40) {
-        p2Y = min(9, max(2, (p2Y - 1)));
-        p2Dir = 0;
+      else{
+        if ((int)ball.YPOS > p2Y){
+          p2Y = min(9, max(2, (p2Y + 1)));
+          p2Dir = 1;
+        }
+        else if ((int)ball.YPOS < p2Y){
+          p2Y = min(9, max(2, (p2Y - 1)));
+          p2Dir = 0;
+        }
       }
       movePaddle(1, p1Y, p1Col, p1Dir);
       movePaddle(2, p2Y, p2Col, p2Dir);
@@ -535,6 +563,36 @@ void loop() {
         ball.yPos = ballY;
         ball.XPOS = BALLX;
         ball.YPOS = BALLY;
+
+        win = checkScore(p1Score, p2Score, p1Col, p2Col);
+
+        if (win == 0){  
+          leds[ledMatrix[0][p1Y + 1]] = CRGB::Black;
+          leds[ledMatrix[0][p1Y]] = CRGB::Black;
+          leds[ledMatrix[0][p1Y - 1]] = CRGB::Black;
+          leds[ledMatrix[17][p2Y + 1]] = CRGB::Black;
+          leds[ledMatrix[17][p2Y]] = CRGB::Black;
+          leds[ledMatrix[17][p2Y - 1]] = CRGB::Black;
+
+          p1Y = 5;
+          p2Y = 5;
+
+          leds[ledMatrix[0][p1Y + 1]] = colors[p1Col];
+          leds[ledMatrix[0][p1Y]] = colors[p1Col];
+          leds[ledMatrix[0][p1Y - 1]] = colors[p1Col];
+          leds[ledMatrix[17][p2Y + 1]] = colors[p2Col];
+          leds[ledMatrix[17][p2Y]] = colors[p2Col];
+          leds[ledMatrix[17][p2Y - 1]] = colors[p2Col];
+
+          printWord("2", 8, 4, CRGB::White);
+          delay(1000);
+          FastLED.show();
+          printWord("2", 8, 4, CRGB::Black);
+          printWord("1", 8, 4, CRGB::White);
+          delay(1000);
+          FastLED.show();
+          printWord("1", 8, 4, CRGB::Black);
+        }
       }
       ball = moveBall(ball);
 
@@ -628,16 +686,22 @@ void loop() {
     win = checkScore(p1Score, p2Score, p1Col, p2Col);
 
     if (win == 1) {
-      printWord("P1~WINS", 1, 7, p1Col);
+      FastLED.clear();
+      printWord("P1~WINS", 1, 7, CRGB::White);
+      FastLED.show();
+      delay(5000);
+      FastLED.clear();
+      FastLED.show();
     }
     else if (win == 2) {
-      printWord("P2~WINS", 1, 7, p2Col);
+      FastLED.clear();
+      printWord("P2~WINS", 1, 7, CRGB::White);
+      FastLED.show();
+      delay(5000);
+      FastLED.clear();
+      FastLED.show();
     }
     if (win != 0) {
-      for (int i = 0; i < 18; i++) {
-        leds[ledMatrix[i][0]] = CRGB::White;
-        leds[ledMatrix[i][11]] = CRGB::White;
-      }
       win = 0;
       p1Score = 0;
       p2Score = 0;
@@ -648,6 +712,32 @@ void loop() {
       else {
         ball.angle = 180;
       }
+
+      p1Y = 5;
+      p2Y = 5;
+
+      FastLED.clear();
+
+      leds[ledMatrix[0][p1Y + 1]] = colors[p1Col];
+      leds[ledMatrix[0][p1Y]] = colors[p1Col];
+      leds[ledMatrix[0][p1Y - 1]] = colors[p1Col];
+      leds[ledMatrix[17][p2Y + 1]] = colors[p2Col];
+      leds[ledMatrix[17][p2Y]] = colors[p2Col];
+      leds[ledMatrix[17][p2Y - 1]] = colors[p2Col];
+  
+      for (int i = 0; i < 18; i++) {
+        leds[ledMatrix[i][0]] = CRGB::White;
+        leds[ledMatrix[i][11]] = CRGB::White;
+      }
+
+      printWord("2", 8, 3, CRGB::White);
+      delay(1000);
+      printWord("2", 8, 3, CRGB::Black);
+      FastLED.show();
+      printWord("1", 8, 3, CRGB::White);
+      delay(1000);
+      printWord("1", 8, 3, CRGB::Black);
+      FastLED.show();
     }
     FastLED.show();
   }
