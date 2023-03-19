@@ -29,6 +29,23 @@ int pot1Val = 0;
 int pot2Val = 0;
 uint8_t BY = 0;
 uint8_t BR = 0;
+int buttons[8];
+int pots[7];
+int buttonTop = 0;
+int buttonLeft = 0;
+int buttonDown = 0;
+int buttonRight = 0;
+int bumperLeft = 0;
+int bumperRight = 0;
+int joyLeftButton = 0;
+int joyRightButton = 0;
+int leftX = 0;
+int leftY = 0;
+int rightX = 0;
+int rightY = 0;
+int potLeftVal = 0;
+int potRightVal = 0;
+int potVerticalVal = 0;
 
 CRGB leds[NUM_LEDS];
 
@@ -60,6 +77,67 @@ const int colLen = 8;
 uint64_t colors[colLen] = { CRGB::Black, CRGB::Turquoise, CRGB::Blue, CRGB::DarkOrange, CRGB::Yellow, CRGB::Green, CRGB::Purple, CRGB::Red };
 uint64_t moreColors[colLen] = {CRGB::Black, CRGB::Seashell, CRGB::Honeydew, CRGB::PeachPuff, CRGB::Thistle, CRGB::CornflowerBlue, CRGB::Fuchsia, CRGB::IndianRed};
 
+// Game vars
+int dirs[4] = {1, 1, -1, -1};
+uint8_t dir = 0;
+uint8_t north = 1;
+uint8_t east = 2;
+uint8_t south = 3;
+uint8_t west = 4;
+uint8_t snakeLength = 3;
+uint8_t foodX = 0;
+uint8_t foodY = 0;
+uint8_t headX = 0;
+uint8_t headY = 0;
+uint8_t snake[100][2];
+
+// Timing vars
+unsigned long move = 500;
+unsigned long timeStamp1 = 0;
+
+void newFood(){
+  foodX = random(18);
+  foodY = random(12);
+  displayMatrix[foodX][foodY] = CRGB::Red;
+}
+
+void newSnake(){
+  headX = 7;
+  headY = 7;
+  dir = east;
+  displayMatrix[headX][headY] = CRGB::Green;
+  displayMatrix[headX-1][headY] = CRGB::Green;
+  displayMatrix[headX-2][headY] = CRGB::Green;
+  snake[0] = [headX, headY];
+  snake[1] = [headX-1, headY];
+  snake[2] = [headX-2, headY];
+}
+
+void addToSnake(){
+  for (int i = snakeLength; i >= 0; i--){
+    snake[i+1] = snake[i];
+  }
+  snake[0] = [foodX, foodY];
+  headX = snake[0][0];
+  headY = snake[0][1];
+}
+
+void moveSnake(){
+  if ((dir % 2) == 0){ // east / west
+    headX = headX + dirs[dir-1];
+  }
+  else{                // north / south
+    headY = headY + dirs[dir-1];
+  }
+
+  for (int i = snakeLength; i > 0; i--){
+    snake[i] = snake[i-1];
+  }
+
+  snake[0][0] = headX;
+  snake[0][1] = headY;
+}
+
 void setup() {
   // put your setup code here, to run once:
   delay(500);
@@ -80,6 +158,21 @@ void setup() {
 
   randomSeed(analogRead(0));
 
+  for (int i = 0; i < 18; i++){
+    for (int j = 0; j < 12; j++){
+      displayMatrix[i][j] = 0;
+    }
+  }
+
+  newFood();
+  newSnake();
+
+  for (int i = 0; i < 18; i++) {
+    for (int j = 0; j < 12; j++) {
+      leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
+    }
+  }
+
   FastLED.clear();
   FastLED.show();
 }
@@ -89,23 +182,74 @@ void loop() {
   if (radio.available()) {
     radio.read(&text, sizeof(text));
     val = strtok(text, ",");
+    num = atoi(val);
+    val = strtok(NULL, ",");
     LeftX = atoi(val);
     val = strtok(NULL, ",");
     LeftY = atoi(val);
     val = strtok(NULL, ",");
-    RightX = atoi(val);
-    val = strtok(NULL, ",");
     RightY = atoi(val);
     val = strtok(NULL, ",");
-    pot1Val = atoi(val);
+    RightX = atoi(val);
     val = strtok(NULL, ",");
-    pot2Val = atoi(val);
+    potLeftVal = atoi(val);
     val = strtok(NULL, ",");
-    BY = atoi(val);
+    potRightVal = atoi(val);
     val = strtok(NULL, ",");
-    BR = atoi(val);
+    potVerticalVal = atoi(val);
 
-    BR = !BR;
-    BY = !BY;
+    for (uint8_t i = 0; i < 8; i++){
+      buttons[i] = (num >> i) & 1;
+      if (i > 5){
+        buttons[i] = !buttons[i];
+      }
+    }
+
+    BR = buttons[4];
+    BY = buttons[5]; 
   }
+
+  if (LeftX > 60){
+    dir = east;    
+  }
+  if (LeftX < 40){
+    dir = west;
+  }
+  if (LeftY > 60){
+    dir = north;
+  }
+  if (LeftY < 40){
+    dir = south;
+  }
+
+  if ((millis() - timeStamp1) > move) {
+    timeStamp1 = millis();
+    if ((headX == foodX) && (headY == foodY)){
+      snakeLength++;
+      addToSnake();
+      newFood();
+    }
+    else{
+      moveSnake();
+    }
+  }
+
+  for (int i = 0; i < 18; i++) {
+    for (int j = 0; j < 12; j++) {
+      displayMatrix[i][j] = 0;
+    }
+  }
+
+  for (int i = 0; i < snakeLength; i++){
+    displayMatrix[snake[i][0]][snake[i][1]] = CRGB::Green;
+  }
+
+  displayMatrix[foodX, foodY] = CRGB::Red;
+
+  for (int i = 0; i < 18; i++) {
+    for (int j = 0; j < 12; j++) {
+      leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
+    }
+  }
+  FastLED.show();
 }
