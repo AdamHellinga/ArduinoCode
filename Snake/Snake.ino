@@ -9,7 +9,7 @@
 #define MODEL PL9823
 #define COLOR RGB
 #define NUM_LEDS 216
-#define BRIGHTNESS 10
+#define BRIGHTNESS 30
 
 RF24 radio(7, 8);  // CE, CSN
 
@@ -21,6 +21,7 @@ char text[32] = { 0 };
 char* val;
 
 //Controller Inputs
+uint8_t num = 0;
 int LeftX = 0;
 int LeftY = 0;
 int RightX = 0;
@@ -78,46 +79,238 @@ uint64_t colors[colLen] = { CRGB::Black, CRGB::Turquoise, CRGB::Blue, CRGB::Dark
 uint64_t moreColors[colLen] = {CRGB::Black, CRGB::Seashell, CRGB::Honeydew, CRGB::PeachPuff, CRGB::Thistle, CRGB::CornflowerBlue, CRGB::Fuchsia, CRGB::IndianRed};
 
 // Game vars
+int countR = 0;
+int countY = 0;
+int snakeColor = 5;
 int dirs[4] = {1, 1, -1, -1};
 uint8_t dir = 0;
 uint8_t north = 1;
 uint8_t east = 2;
 uint8_t south = 3;
 uint8_t west = 4;
-uint8_t snakeLength = 3;
+int snakeLength = 3;
 uint8_t foodX = 0;
 uint8_t foodY = 0;
 uint8_t headX = 0;
 uint8_t headY = 0;
+bool lose = 0;
 uint8_t snake[100][2];
 
 // Timing vars
 unsigned long move = 500;
 unsigned long timeStamp1 = 0;
 
+// Display Val
+char scoreString[10];
+
+void printWord(char* displayThis, int X, int Y, uint64_t col) {
+  char string[50];
+  int len = 0;
+  uint32_t letter;
+  int furthestX = 0;
+  int yIndex = 0;
+  int tempCol = 0;
+  int go = 1;
+  sprintf(string, displayThis);
+  len = strlen(string);
+
+  for (int i = 0; i < len; i++) {
+    tempCol = col;
+    switch (string[i]) {
+      case 'A':
+        letter = 0x064BD29;
+        break;
+      case 'B':
+        letter = 0x0749D27;
+        break;
+      case 'C':
+        letter = 0x0E0842E;
+        break;
+      case 'D':
+        letter = 0x074A527;
+        break;
+      case 'E':
+        letter = 0x0F0BC2F;
+        break;
+      case 'F':
+        letter = 0x0F09C21;
+        break;
+      case 'G':
+        letter = 0x0E0B52E;
+        break;
+      case 'H':
+        letter = 0x094BD29;
+        break;
+      case 'I':
+        letter = 0x0108421;
+        break;
+      case 'J':
+        letter = 0x0842126;
+        break;
+      case 'K':
+        letter = 0x0928CA9;
+        break;
+      case 'L':
+        letter = 0x010842F;
+        break;
+      case 'M':
+        letter = 0x11DD631;
+        break;
+      case 'N':
+        letter = 0x095B529;
+        break;
+      case 'O':
+        letter = 0x064A536;
+        break;
+      case 'P':
+        letter = 0x0749C21;
+        break;
+      case 'Q':
+        letter = 0x064A5AE;
+        break;
+      case 'R':
+        letter = 0x0749CA9;
+        break;
+      case 'S':
+        letter = 0x0E09907;
+        break;
+      case 'T':
+        letter = 0x0710842;
+        break;
+      case 'U':
+        letter = 0x094A52F;
+        break;
+      case 'V':
+        letter = 0x05294A2;
+        break;
+      case 'W':
+        letter = 0x118C6AA;
+        break;
+      case 'X':
+        letter = 0x05288A5;
+        break;
+      case 'Y':
+        letter = 0x0529C42;
+        break;
+      case 'Z':
+        letter = 0x0F4104F;
+        break;
+      case '1':
+        letter = 0x0218842;
+        break;
+      case '2':
+        letter = 0x0721827;
+        break;
+      case '3':
+        letter = 0x0720887;
+        break;
+      case '4':
+        letter = 0x0529C84;
+        break;
+      case '5':
+        letter = 0x0709C87;
+        break;
+      case '6':
+        letter = 0x0709CA7;
+        break;
+      case '7':
+        letter = 0x0720821;
+        break;
+      case '8':
+        letter = 0x0729CA7;
+        break;
+      case '9':
+        letter = 0x0729C87;
+        break;
+      case '0':
+        letter = 0x07294A7;
+        break;
+      case '!':
+        letter = 0x0108401;
+        break;
+      case ' ':
+        letter = 0x0000800;
+        tempCol = CRGB::Black;
+        break;
+      case '~':
+        X = 1;
+        furthestX = X;
+        Y = Y - 7;
+        go = 0;
+        break;
+    }
+    if (go){
+      for (int j = 0; j < 25; j++) {
+        if (j % 5 == 0) {
+          yIndex++;
+        }
+        if ((letter >> j) & 1) {
+          leds[ledMatrix[(j % 5) + X][(yIndex - 1) + Y]] = tempCol;
+          if (((j % 5) + X) >= furthestX) {
+            furthestX = (j % 5) + X;
+          }
+        }
+      }
+      yIndex = 0;
+      X = furthestX + 2;
+    }
+    else{
+      go = 1;
+    }
+  }
+  FastLED.show();
+}
+
 void newFood(){
   foodX = random(18);
   foodY = random(12);
-  displayMatrix[foodX][foodY] = CRGB::Red;
+  while (displayMatrix[foodX][foodY] == snakeColor){
+    foodX = random(18);
+    foodY = random(12);
+  }
+  displayMatrix[foodX][foodY] = 7;
 }
 
 void newSnake(){
   headX = 7;
   headY = 7;
   dir = east;
-  displayMatrix[headX][headY] = CRGB::Green;
-  displayMatrix[headX-1][headY] = CRGB::Green;
-  displayMatrix[headX-2][headY] = CRGB::Green;
-  snake[0] = [headX, headY];
-  snake[1] = [headX-1, headY];
-  snake[2] = [headX-2, headY];
+  snakeLength = 3;
+  displayMatrix[headX][headY] = snakeColor;
+  displayMatrix[headX-1][headY] = snakeColor;
+  displayMatrix[headX-2][headY] = snakeColor;
+  snake[0][0] = headX;
+  snake[0][1] = headY;
+  snake[1][0] = headX-1;
+  snake[1][1] = headY;
+  snake[2][0] = headX-2;
+  snake[2][1] = headY;
+}
+
+void clearMatrix(){
+  for (int i = 0; i < 18; i++) {
+    for (int j = 0; j < 12; j++) {
+      displayMatrix[i][j] = 0;
+    }
+  }
+}
+
+void printMatrix(){
+  for (int i = 0; i < 18; i++) {
+    for (int j = 0; j < 12; j++) {
+      leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
+    }
+  }
+  FastLED.show();
 }
 
 void addToSnake(){
-  for (int i = snakeLength; i >= 0; i--){
-    snake[i+1] = snake[i];
+  for (int i = snakeLength - 1; i >= 0; i--){
+    snake[i+1][0] = snake[i][0];
+    snake[i+1][1] = snake[i][1];
   }
-  snake[0] = [foodX, foodY];
+  snake[0][0] = foodX; 
+  snake[0][1] = foodY;
   headX = snake[0][0];
   headY = snake[0][1];
 }
@@ -130,18 +323,45 @@ void moveSnake(){
     headY = headY + dirs[dir-1];
   }
 
+  if ((headX < 0) || (headX > 17) || (headY < 0) || (headY > 11) || ((displayMatrix[headX][headY] != 0) && (displayMatrix[headX][headY] != 7))){
+    lose = 1;
+  }
+
   for (int i = snakeLength; i > 0; i--){
-    snake[i] = snake[i-1];
+    snake[i][0] = snake[i-1][0];
+    snake[i][1] = snake[i-1][1];
   }
 
   snake[0][0] = headX;
   snake[0][1] = headY;
 }
 
+void reset(){
+  clearMatrix();
+  newSnake();
+  newFood();
+}
+
+void countDown(){
+  printWord("2", 10, 3, CRGB::White);
+  delay(1000);
+  printWord("2", 10, 3, CRGB::Black);
+  FastLED.show();
+  printWord("1", 10, 3, CRGB::White);
+  delay(1000);
+  printWord("1", 10, 3, CRGB::Black);
+  FastLED.show();
+}
+
+void showScore(){
+  sprintf(scoreString, "%d", snakeLength);
+  printWord(scoreString, 5, 3, CRGB::White);
+}
+
 void setup() {
   // put your setup code here, to run once:
   delay(500);
-  //Serial.begin(9600);
+  Serial.begin(9600);
   radio.begin();
 
   //set the address
@@ -163,18 +383,6 @@ void setup() {
       displayMatrix[i][j] = 0;
     }
   }
-
-  newFood();
-  newSnake();
-
-  for (int i = 0; i < 18; i++) {
-    for (int j = 0; j < 12; j++) {
-      leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
-    }
-  }
-
-  FastLED.clear();
-  FastLED.show();
 }
 
 void loop() {
@@ -206,24 +414,50 @@ void loop() {
     }
 
     BR = buttons[4];
-    BY = buttons[5]; 
+    BY = buttons[5];
+
+    move = map(potLeftVal, 0, 100, 0, 500); 
   }
 
-  if (LeftX > 60){
-    dir = east;    
+  if (BR) {
+    countR++;
+    if (countR > 4) {
+      if ((snakeColor + 1) > (colLen - 2)) {
+        snakeColor = 1;
+      }
+      else {
+        snakeColor++;
+      }
+      countR = 0;
+    }
   }
-  if (LeftX < 40){
-    dir = west;
-  }
-  if (LeftY > 60){
-    dir = north;
-  }
-  if (LeftY < 40){
-    dir = south;
+  else {
+    countR = 0;
   }
 
   if ((millis() - timeStamp1) > move) {
     timeStamp1 = millis();
+    if (LeftX > 80){
+      if (dir != east){
+        dir = west;
+      }    
+    }
+    else if (LeftX < 20){
+      if (dir != west){
+        dir = east;
+      }
+    }
+    else if (LeftY > 80){
+      if (dir != north){
+        dir = south;
+      }    
+    }
+    else if (LeftY < 20){
+      if (dir != south){
+        dir = north;
+      }
+    }
+
     if ((headX == foodX) && (headY == foodY)){
       snakeLength++;
       addToSnake();
@@ -234,22 +468,25 @@ void loop() {
     }
   }
 
-  for (int i = 0; i < 18; i++) {
-    for (int j = 0; j < 12; j++) {
-      displayMatrix[i][j] = 0;
+  if (!lose){
+    clearMatrix();
+
+    for (int i = 0; i < snakeLength; i++){
+      displayMatrix[snake[i][0]][snake[i][1]] = snakeColor;
     }
+    displayMatrix[foodX][foodY] = 7;
+
+    printMatrix();
   }
-
-  for (int i = 0; i < snakeLength; i++){
-    displayMatrix[snake[i][0]][snake[i][1]] = CRGB::Green;
-  }
-
-  displayMatrix[foodX, foodY] = CRGB::Red;
-
-  for (int i = 0; i < 18; i++) {
-    for (int j = 0; j < 12; j++) {
-      leds[ledMatrix[i][j]] = colors[displayMatrix[i][j]];
-    }
+  else{
+    lose = 0;
+    dir = east;
+    clearMatrix();
+    showScore();
+    delay(3000);
+    reset();
+    printMatrix();
+    countDown();
   }
   FastLED.show();
 }
