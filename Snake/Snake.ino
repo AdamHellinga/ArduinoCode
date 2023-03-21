@@ -94,7 +94,7 @@ uint8_t foodY = 0;
 uint8_t headX = 0;
 uint8_t headY = 0;
 bool lose = 0;
-uint8_t snake[100][2];
+uint8_t snakeArray[100][2];
 
 // Timing vars
 unsigned long move = 500;
@@ -279,12 +279,12 @@ void newSnake(){
   displayMatrix[headX][headY] = snakeColor;
   displayMatrix[headX-1][headY] = snakeColor;
   displayMatrix[headX-2][headY] = snakeColor;
-  snake[0][0] = headX;
-  snake[0][1] = headY;
-  snake[1][0] = headX-1;
-  snake[1][1] = headY;
-  snake[2][0] = headX-2;
-  snake[2][1] = headY;
+  snakeArray[0][0] = headX;
+  snakeArray[0][1] = headY;
+  snakeArray[1][0] = headX-1;
+  snakeArray[1][1] = headY;
+  snakeArray[2][0] = headX-2;
+  snakeArray[2][1] = headY;
 }
 
 void clearMatrix(){
@@ -306,13 +306,13 @@ void printMatrix(){
 
 void addToSnake(){
   for (int i = snakeLength - 1; i >= 0; i--){
-    snake[i+1][0] = snake[i][0];
-    snake[i+1][1] = snake[i][1];
+    snakeArray[i+1][0] = snakeArray[i][0];
+    snakeArray[i+1][1] = snakeArray[i][1];
   }
-  snake[0][0] = foodX; 
-  snake[0][1] = foodY;
-  headX = snake[0][0];
-  headY = snake[0][1];
+  snakeArray[0][0] = foodX; 
+  snakeArray[0][1] = foodY;
+  headX = snakeArray[0][0];
+  headY = snakeArray[0][1];
 }
 
 void moveSnake(){
@@ -328,12 +328,12 @@ void moveSnake(){
   }
 
   for (int i = snakeLength; i > 0; i--){
-    snake[i][0] = snake[i-1][0];
-    snake[i][1] = snake[i-1][1];
+    snakeArray[i][0] = snakeArray[i-1][0];
+    snakeArray[i][1] = snakeArray[i-1][1];
   }
 
-  snake[0][0] = headX;
-  snake[0][1] = headY;
+  snakeArray[0][0] = headX;
+  snakeArray[0][1] = headY;
 }
 
 void reset(){
@@ -472,7 +472,7 @@ void loop() {
     clearMatrix();
 
     for (int i = 0; i < snakeLength; i++){
-      displayMatrix[snake[i][0]][snake[i][1]] = snakeColor;
+      displayMatrix[snakeArray[i][0]][snakeArray[i][1]] = snakeColor;
     }
     displayMatrix[foodX][foodY] = 7;
 
