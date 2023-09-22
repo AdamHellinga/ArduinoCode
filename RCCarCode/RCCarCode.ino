@@ -36,7 +36,7 @@
 #define BRIGHTNESS 255
 
 //Battery Stats
-#define DEADBATTERY 10.50
+#define DEADBATTERY 11.35
 
 //create an RF24 object
 RF24 radio(7, 8);  // CE, CSN
@@ -78,6 +78,7 @@ int spd = 10;
 int count = 0;
 int loops = 25;
 int off = 0;
+int deadBattCount = 0;
 float value = 0.0;
 
 //Driving vars
@@ -139,7 +140,13 @@ void loop(){
   batt = analogRead(BATTERY);
   batt = batt * (5.0/1023.0) * 2.4898419864559819413092550790068;
   if (batt <= DEADBATTERY){
-    battTooLow = true;
+    deadBattCount += 1;
+    if (deadBattCount > 25){
+      battTooLow = true;
+    }
+  }
+  else{
+    deadBattCount = 0;
   }
   if (!battTooLow){
     FastLED.show();
