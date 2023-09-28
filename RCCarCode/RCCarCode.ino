@@ -184,6 +184,10 @@ void loop(){
         }
       }
 
+      buttonTop = buttons[0];
+      buttonLeft = buttons[1];
+      buttonRight = buttons[2];
+      buttonDown = buttons[3];
       bumperLeft = buttons[4];
       bumperRight = buttons[5]; 
 
@@ -243,11 +247,38 @@ void loop(){
         value = value - DEADZONE;
       }
       drive.write(value);
+
+      if (buttonTop){
+        if (batt >= 12.00){
+          leds[0] = CRGB::Green;
+          leds[1] = CRGB::Green;
+          leds[2] = CRGB::Green;
+          leds[3] = CRGB::Green;
+          leds[4] = CRGB::Green;
+          leds[5] = CRGB::Green;
+        } else if (batt >= 11.6) {
+          leds[0] = CRGB::Yellow;
+          leds[1] = CRGB::Yellow;
+          leds[2] = CRGB::Yellow;
+          leds[3] = CRGB::Yellow;
+          leds[4] = CRGB::Yellow;
+          leds[5] = CRGB::Yellow;
+        } else if (batt >= 11.3) {
+          leds[0] = CRGB::Red;
+          leds[1] = CRGB::Red;
+          leds[2] = CRGB::Red;
+          leds[3] = CRGB::Red;
+          leds[4] = CRGB::Red;
+          leds[5] = CRGB::Red;
+        }
+        FastLED.show();
+      }
+
       sprintf(text, "");
       off = 0;
     }
     else{
-      if (off > 50){
+      if (off > 100){
         value = 0;
         servo.write(STRAIGHT);
         drive.write(IDLE);
