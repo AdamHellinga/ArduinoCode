@@ -24,6 +24,12 @@ int accel = 10000;
 int deccel = 20000;
 long maxSpeed = 500000;
 long currentSpeed = 0;
+unsigned long openClick = 0;
+unsigned long closeClick = 0;
+unsigned long lastOpenClick = 0;
+unsigned long lastCloseClick = 0;
+unsigned long noClick = 0;
+unsigned long threshold = 250;
 int speedChangeDelay;
 bool dir = false;
 bool first = true;
@@ -31,16 +37,19 @@ bool spinUp = true;
 bool spinDown = false;
 bool moving = false;
 bool stop = false;
+bool autoOpen = false;
+bool autoClose = false;
 int openWindow = 0;
 int closeWindow = 0;
 int openLimit = 0;
 int closeLimit = 0;
 
+long lastClicks[2][5] = {{0, 0, 0, 0, 0},{0, 0, 0, 0, 0}};
+
 //== Setup ===============================================================================
 
 void setup() {
-
-  Serial.begin(11520);               // initialize hardware serial for debugging
+  Serial.begin(9600);               // initialize hardware serial for debugging
   SoftSerial.begin(11520);           // initialize software serial for UART motor control
   TMCdriver.beginSerial(11520);      // Initialize UART
   
@@ -65,10 +74,32 @@ void setup() {
 //== Loop =================================================================================
 
 void loop() {
-  openWindow = !(digitalRead(OPEN));
+  openWindow  = !(digitalRead(OPEN));
   closeWindow = !(digitalRead(CLOSE));
-  openLimit = !(digitalRead(OPENLIMIT));
-  closeLimit = !(digitalRead(CLOSELIMIT));
+  openLimit   = !(digitalRead(OPENLIMIT));
+  closeLimit  = !(digitalRead(CLOSELIMIT));
+
+  if ((lastClicks[0][1] == 1) && (lastClicks[0][2] == 3) && (lastClicks[0][3] == 1)){
+    if (abs(openClick - lastOpenClick) <= threshold){
+      for (int i = 0; i < 5; i++){
+        lastClicks[0][i] = 0;
+      }
+      if (!autoClose){
+        autoOpen = !autoOpen;
+      }
+    }
+  }
+
+  if ((lastClicks[0][1] == 2) && (lastClicks[0][2] == 3) && (lastClicks[0][3] == 2)){
+    if (abs(closeClick - lastCloseClick) <= threshold){
+      for (int i = 0; i < 5; i++){
+        lastClicks[0][i] = 0;
+      }
+      if (!autoOpen){
+        autoClose = !autoClose;
+      }
+    }
+  }
 
   if (moving){
     spinUp = false;
@@ -80,7 +111,17 @@ void loop() {
     spinUp = true;
   }
 
-  if (openWindow){
+  if (openWindow || autoOpen){
+    if (openWindow && (lastClicks[0][0] != 1)){
+      lastOpenClick = openClick;
+      openClick = millis();
+      for (int i = 0; i < 2; i++){
+        for (int j = 4; j >= 0; j--){
+          lastClicks[i][j+1] = lastClicks[i][j];
+        }
+      }
+      lastClicks[0][0] = 1;
+    }
     if (!openLimit){
       moving = true;
       TMCdriver.shaft(!dir); // SET DIRECTION
@@ -89,9 +130,9 @@ void loop() {
           openWindow = !(digitalRead(OPEN));
           openLimit = !(digitalRead(OPENLIMIT));
           closeLimit = !(digitalRead(CLOSELIMIT));
-          if ((openWindow) && (!openLimit)){
+          if ((openWindow || autoOpen) && (!openLimit)){
             TMCdriver.VACTUAL(i);                                   // Set motor speed
-            Serial << TMCdriver.VACTUAL() << endl;
+            //Serial << TMCdriver.VACTUAL() << endl;
             delay(50);
             currentSpeed = i;
           }
@@ -104,7 +145,17 @@ void loop() {
     }
   }
 
-  if (closeWindow){
+  if (closeWindow || autoClose){
+    if (closeWindow && (lastClicks[0][0] != 2)){
+      lastCloseClick = closeClick;
+      closeClick = millis();
+      for (int i = 0; i < 2; i++){
+        for (int j = 4; j >= 0; j--){
+          lastClicks[i][j+1] = lastClicks[i][j];
+        }
+      }
+      lastClicks[0][0] = 2;
+    }
     if (!closeLimit){
       moving = true;
       TMCdriver.shaft(dir); // SET DIRECTION
@@ -113,9 +164,9 @@ void loop() {
           closeWindow = !(digitalRead(CLOSE));
           openLimit = !(digitalRead(OPENLIMIT));
           closeLimit = !(digitalRead(CLOSELIMIT));
-          if ((closeWindow) && (!closeLimit)){
+          if ((closeWindow || autoClose) && (!closeLimit)){
             TMCdriver.VACTUAL(i);                                     // Set motor speed
-            Serial << TMCdriver.VACTUAL() << endl;
+            //Serial << TMCdriver.VACTUAL() << endl;
             delay(50);
             currentSpeed = i;
           }
@@ -129,7 +180,17 @@ void loop() {
   } 
 
   if (!(closeLimit || openLimit)){
-    if (!(closeWindow || openWindow)){
+    if (!(closeWindow || openWindow || autoOpen || autoClose)){
+      noClick = millis();
+      if (lastClicks[0][0] != 3){
+        for (int i = 0; i < 2; i++){
+          for (int j = 4; j >= 0; j--){
+            lastClicks[i][j+1] = lastClicks[i][j];
+          }
+        }
+        lastClicks[0][0] = 3;
+      }
+
       if (moving){
         spinDown = true;
       }
@@ -139,7 +200,7 @@ void loop() {
           closeLimit = !(digitalRead(CLOSELIMIT));
           if (!(closeLimit || openLimit)){
             TMCdriver.VACTUAL(i);
-            Serial << TMCdriver.VACTUAL() << endl;
+            //Serial << TMCdriver.VACTUAL() << endl;
             delay(50);
           }
           else{
@@ -152,14 +213,47 @@ void loop() {
       }
       moving = false;
     }
+    else{
+      if (autoClose || autoOpen){
+        noClick = millis();
+        if (lastClicks[0][0] != 3){
+          for (int i = 0; i < 2; i++){
+            for (int j = 4; j >= 0; j--){
+              lastClicks[i][j+1] = lastClicks[i][j];
+            }
+          }
+          lastClicks[0][0] = 3;
+        }
+      }
+    }
   }
   else{
+    if (!(closeWindow || openWindow || autoOpen || autoClose)){
+      noClick = millis();
+      if (lastClicks[0][0] != 3){
+        for (int i = 0; i < 2; i++){
+          for (int j = 4; j >= 0; j--){
+            lastClicks[i][j+1] = lastClicks[i][j];
+          }
+        }
+        lastClicks[0][0] = 3;
+      }
+    }
     if (stop){
       TMCdriver.VACTUAL(0);
       moving = false;
       spinDown = false;
       stop = false;
       currentSpeed = 0;
+      if (closeLimit){
+        autoClose = false;
+      }
+      if (openLimit){
+        autoOpen = false;
+      }
     }
   }
+  Serial.print(autoOpen);
+  Serial.print(autoClose);
+  Serial.print("\n");
 }
